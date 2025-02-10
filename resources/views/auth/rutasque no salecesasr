@@ -1,0 +1,133 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AgentController;
+use App\Http\Controllers\PlayerController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\RaffleController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\BalanceController;
+use App\Http\Controllers\BalanceRechargeController;
+
+
+// Página de bienvenida
+Route::get('/', function () {
+    return view('welcome');
+});
+
+// Ruta de prueba de autenticación
+Route::get('/test-auth', function () {
+    return response()->json([
+        'auth_check' => Auth::guard('player')->check(),
+        'player_id' => Auth::guard('player')->id(),
+        'player_info' => Auth::guard('player')->user(),
+    ]);
+});
+
+// **CERRAR SESIÓN**
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::post('/logout/agent', [LoginController::class, 'agentLogout'])->name('agent.logout');
+Route::post('/logout/player', [LoginController::class, 'playerLogout'])->name('player.logout');
+
+// **REGISTRO DE USUARIOS**
+Route::get('/register/agent', [AgentController::class, 'showRegistrationForm'])->name('agent.register.form');
+Route::post('/register/agent', [AgentController::class, 'register'])->name('agent.register');
+
+Route::get('/register/player', [PlayerController::class, 'showRegistrationForm'])->name('player.register.form');
+Route::post('/register/player', [PlayerController::class, 'register'])->name('player.register');
+
+// **LOGIN DE USUARIOS**
+Route::get('/login/agent', [LoginController::class, 'showAgentLoginForm'])->name('agent.login.form');
+Route::post('/login/agent', [LoginController::class, 'agentLogin'])->name('agent.login');
+
+Route::get('/login/player', [LoginController::class, 'showPlayerLoginForm'])->name('player.login.form');
+Route::post('/login/player', [LoginController::class, 'playerLogin'])->name('player.login');
+
+// **DASHBOARD DEL AGENTE Y JUGADOR (AUTENTICADOS)**
+Route::middleware(['auth:agent'])->group(function () {
+    Route::get('/agent/dashboard', [AgentController::class, 'dashboard'])->name('agent.dashboard');
+
+    // **GESTIÓN DE SALAS (ROOMS)**
+    Route::prefix('agent/rooms')->group(function () {
+        Route::get('/', [RoomController::class, 'index'])->name('rooms.index');
+        Route::get('/create', [RoomController::class, 'create'])->name('rooms.create');
+        Route::post('/', [RoomController::class, 'store'])->name('rooms.store');
+        Route::get('/{room}/edit', [RoomController::class, 'edit'])->name('rooms.edit');
+        Route::put('/{room}', [RoomController::class, 'update'])->name('rooms.update');
+        Route::delete('/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
+    });
+
+    // **GESTIÓN DE SORTEOS (RAFFLES)**
+    Route::prefix('agent/raffles')->group(function () {
+        Route::get('/', [RaffleController::class, 'index'])->name('agent.raffles.index');
+        Route::get('/create/{room_id}', [RaffleController::class, 'create'])->name('agent.raffles.create');
+        Route::post('/store', [RaffleController::class, 'store'])->name('agent.raffles.store');
+        Route::get('/{raffle}/edit', [RaffleController::class, 'edit'])->name('agent.raffles.edit');
+        Route::put('/{raffle}', [RaffleController::class, 'update'])->name('agent.raffles.update');
+    });
+
+    // **LÓGICA DEL JUEGO (BINGO)**
+    Route::prefix('agent/raffles')->group(function () {
+        Route::get('/{raffle}/play', [RaffleController::class, 'play'])->name('agent.raffles.play');
+        Route::post('/{raffle}/generate-number', [RaffleController::class, 'generateNumber'])->name('agent.raffles.generate');
+        Route::post('/{raffle}/next', [RaffleController::class, 'nextRaffle'])->name('agent.raffles.next');
+        Route::post('/{raffle}/end', [RaffleController::class, 'endRaffle'])->name('agent.raffles.end');
+    });
+
+    // **GESTIÓN DE ESTADO DE SORTEOS**
+    Route::get('/agent/raffles/start/{raffle_id}', [RaffleController::class, 'startRaffle'])->name('agent.raffles.start');
+    Route::get('/agent/raffles/finish/{raffle_id}', [RaffleController::class, 'finishRaffle'])->name('agent.raffles.finish');
+
+    // 📌 **GESTIÓN DE RECARGAS POR AGENTES**
+    Route::prefix('agent/recharges')->group(function () {
+        Route::get('/', [BalanceController::class, 'showPendingRecharges'])->name('agent.recharges.index');
+        Route::post('/{recharge}/update', [BalanceController::class, 'updateRechargeStatus'])->name('agent.recharge.update');
+    });
+});
+
+// 📌 **GESTIÓN DE RECARGAS POR JUGADORES**
+Route::middleware(['auth:player'])->group(function () {
+    Route::get('/player/dashboard', [PlayerController::class, 'dashboard'])->name('player.dashboard');
+
+    Route::prefix('player/recharges')->group(function () {
+        Route::get('/create', [BalanceRechargeController::class, 'create'])->name('player.recharges.create');
+        Route::post('/store', [BalanceRechargeController::class, 'store'])->name('player.recharges.store');
+        Route::get('/', [BalanceController::class, 'showPlayerRecharges'])->name('player.recharges.index');
+    });
+});
+Route::get('/player/room/{id}/sorteo', [PlayerController::class, 'viewSorteo'])->name('player.room.sorteo');
+
+
+
+Route::middleware(['auth:player'])->group(function () {
+    Route::post('/player/buy-card', [PlayerController::class, 'buyCard'])->name('player.buy.card');
+    
+});
+Route::middleware(['auth:player'])->group(function () {
+    Route::get('/player/my-cards/{room_id}', [PlayerController::class, 'myCards'])->name('player.my-cards');
+});
+
+Route::get('/player/my-cards/{id}', [PlayerController::class, 'myCards'])->name('player.my-cards');
+
+
+Route::middleware(['auth:player'])->group(function () {
+    Route::get('/player/rooms/{room}', [RoomController::class, 'show'])->name('player.room.show');
+});
+Route::get('/player/room/{id}', [RoomController::class, 'show'])->name('player.room.show');
+Route::post('/player/buy-cards', [RoomController::class, 'buyCards'])->name('player.buyCards');
+
+
+Route::get('/player/room/{room}/raffle-numbers', [RaffleController::class, 'getGeneratedNumbers'])->name('player.raffle.numbers');
+
+
+Route::get('/agent/raffles/{raffle}/play', [RaffleController::class, 'play'])->name('agent.raffles.play');
+
+Route::middleware(['auth:player'])->group(function () {
+    Route::get('/player/room/{roomId}/sorteo', [RaffleController::class, 'show'])->name('player.raffle.show');
+});
+
+Route::middleware(['auth:agent'])->group(function () {
+    Route::post('/agent/raffles/{raffleId}/generate-number', [RaffleController::class, 'generateNumber'])->name('agent.raffles.generate');
+});
+// **DESACTIVAR RUTA DE LOGIN PREDETERMINADO DE LARAVEL**
+Auth::routes(['login' => false]);
