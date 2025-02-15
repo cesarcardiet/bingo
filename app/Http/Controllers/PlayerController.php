@@ -9,9 +9,15 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Models\BingoCard;
 use App\Models\Room;
+use App\Models\RaffleNumber;
+use App\Models\Raffle;
+use App\Traits\BingoHelper;
+
+
 
 class PlayerController extends Controller
 {
+    use BingoHelper;
     public function __construct()
     {
         $this->middleware('auth:player')->except(['register', 'showRegistrationForm']);
@@ -86,41 +92,78 @@ class PlayerController extends Controller
     /**
      * Permite a un jugador comprar cartones.
      */
-    public function buyCard(Request $request)
+    public function buyCard(Request $request, $roomId)
     {
-        $player = Auth::guard('player')->user();
-        $selectedCards = json_decode($request->selected_cards, true);
-
-        if (!$selectedCards || count($selectedCards) == 0) {
-            return back()->withErrors('No has seleccionado ningún cartón.');
+        $room = Room::findOrFail($roomId);
+    
+        // 🔹 Verificar si hay un sorteo activo en la sala antes de permitir la compra
+        $activeRaffles = Raffle::where('room_id', $roomId)
+                               ->where('status', 'Pendiente')
+                               ->exists();
+    
+        if (!$activeRaffles) {
+            return back()->with('error', 'No hay sorteos activos en esta sala. No puedes comprar cartones aún.');
         }
-
-        $cards = BingoCard::whereIn('id', $selectedCards)
-                          ->where('status', 'Disponible')
-                          ->get();
-
-        if ($cards->count() !== count($selectedCards)) {
-            return back()->withErrors('Uno o más cartones ya han sido comprados.');
+    
+        // Lógica de compra normal
+        $player = auth()->user();
+    
+        if ($player->balance < $room->card_price) {
+            return back()->with('error', 'Saldo insuficiente para comprar un cartón.');
         }
+    
+        // 🔹 Generar número único para el cartón
+        $cardNumber = BingoCard::where('room_id', $roomId)->max('card_number') + 1;
+    
+        $cardData = $this->generateBingoCardData(); // Asegurar que esta función existe en el controlador
+    
+        $card = BingoCard::create([
+            'room_id' => $roomId,
+            'player_id' => $player->id,
+            'card_number' => $cardNumber,
+            'card_data' => json_encode($cardData),
+            'status' => 'Comprado'
+        ]);
+    
+        // Descontar saldo del jugador
+        $player->balance -= $room->card_price;
+        $player->save();
+    
+        return redirect()->route('player.sala', ['roomId' => $roomId])
 
-        $totalPrice = $cards->sum(fn($card) => $card->room->card_price);
-
-        if ($player->balance < $totalPrice) {
-            return back()->withErrors('Saldo insuficiente. Por favor, recarga tu cuenta.');
-        }
-
-        foreach ($cards as $card) {
-            $card->update([
-                'player_id' => $player->id,
-                'status' => 'Comprado'
-            ]);
-        }
-
-        $roomId = $cards->first()->room_id;
-
-        return redirect()->route('player.my-cards', ['room_id' => $roomId])
-            ->with('success', 'Cartones comprados con éxito.');
+                         ->with('success', 'Cartón comprado exitosamente.');
     }
+    
+    private function generateBingoCardData()
+{
+    $columns = ['B', 'I', 'N', 'G', 'O'];
+    $card = [];
+
+    foreach ($columns as $index => $letter) {
+        $min = $index * 15 + 1;
+        $max = $min + 14;
+        $card[$letter] = array_rand(array_flip(range($min, $max)), 5);
+    }
+
+    return $card;
+}
+
+    
+    
+
+public function showRoom($roomId)
+{
+    $room = Room::findOrFail($roomId);
+    $availableCards = BingoCard::where('room_id', $roomId)
+                               ->where('status', 'Disponible')
+                               ->get();
+
+                               return redirect()->route('player.room.show', ['room' => $roomId])
+                               ->with('success', 'Cartón comprado exitosamente.');
+                           
+}
+
+
 
     /**
      * Muestra los sorteos de una sala específica donde el jugador ha comprado cartones.
@@ -148,14 +191,13 @@ class PlayerController extends Controller
     {
         $player = Auth::guard('player')->user();
         
-        // Verificar si el room_id se está enviando correctamente
+        // Obtener el ID de la sala desde la URL
         $roomId = $request->query('room_id');
-    
         if (!$roomId) {
             return redirect()->route('player.dashboard')->withErrors('No se ha seleccionado una sala.');
         }
     
-        // Verificar si la sala realmente existe
+        // Verificar si la sala existe
         $room = Room::find($roomId);
         if (!$room) {
             return redirect()->route('player.dashboard')->withErrors('La sala no existe.');
@@ -166,8 +208,14 @@ class PlayerController extends Controller
                                 ->where('room_id', $roomId)
                                 ->get();
     
-        return view('player.my-cards', compact('room', 'playerCards'));
+        // Obtener los números sorteados en esta sala
+        $generatedNumbers = RaffleNumber::whereHas('raffle', function ($query) use ($roomId) {
+            $query->where('room_id', $roomId);
+        })->pluck('number')->toArray();
+    
+        return view('player.my-cards', compact('room', 'playerCards', 'generatedNumbers'));
     }
+    
     
     
 

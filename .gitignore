@@ -5,9 +5,7 @@
 /public/storage
 /storage/*.key
 /vendor
-.env
 .env.backup
-.env.production
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
@@ -16,4 +14,7 @@ npm-debug.log
 yarn-error.log
 /.fleet
 /.idea
-/.vscode
+temp_auto_push.bat
+temp_interactive_push.bat
+branch_structure.json
+config.bat

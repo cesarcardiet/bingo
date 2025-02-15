@@ -3,33 +3,31 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Broadcasting\ShouldBroadcast;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Queue\SerializesModels;
 
-class NumberGenerated implements ShouldBroadcastNow
+class WinnerAnnounced implements ShouldBroadcast
 {
-    use InteractsWithSockets, SerializesModels;
+    use SerializesModels;
 
-    public $number;
-    public $raffle_id;
+    public $player_id;
+    public $bingo_card_id;
+    public $prize;
 
-    public function __construct($number, $raffle_id)
+    public function __construct($player_id, $bingo_card_id, $prize)
     {
-        $this->number = $number;
-        $this->raffle_id = $raffle_id;
+        $this->player_id = $player_id;
+        $this->bingo_card_id = $bingo_card_id;
+        $this->prize = $prize;
     }
 
     public function broadcastOn()
     {
-        return new Channel('raffle.' . $this->raffle_id);
+        return new Channel("raffle-winner");
     }
 
     public function broadcastAs()
     {
-        return 'number.generated';
+        return "winner.announced";
     }
 }
