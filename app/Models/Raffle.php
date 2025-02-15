@@ -30,5 +30,12 @@ class Raffle extends Model
     {
         return $this->hasMany(RaffleNumber::class, 'raffle_id');
     }
+
+    public function bingoCards()
+{
+    return $this->hasMany(BingoCard::class, 'raffle_id');
+}
+
+    
     
 }

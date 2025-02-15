@@ -59,7 +59,7 @@ Route::middleware(['auth:agent'])->group(function () {
         Route::post('/{raffle}/generate-number', [RaffleController::class, 'generateNumber'])->name('agent.raffles.generate');
         Route::get('/start/{raffle_id}', [RaffleController::class, 'startRaffle'])->name('agent.raffles.start');
         Route::get('/finish/{raffle_id}', [RaffleController::class, 'finishRaffle'])->name('agent.raffles.finish');
-        Route::delete('/{raffle}', [RaffleController::class, 'destroy'])->name('agent.raffles.destroy'); // ✅ Ruta de eliminación corregida
+        Route::delete('/{raffle}', [RaffleController::class, 'destroy'])->name('agent.raffles.destroy');
     });
 
     // **GESTIÓN DE RECARGAS POR AGENTES**
@@ -82,21 +82,27 @@ Route::middleware(['auth:player'])->group(function () {
 
     // **GESTIÓN DE CARTONES Y SALAS**
     Route::prefix('player')->group(function () {
-        Route::post('/buy-card', [PlayerController::class, 'buyCard'])->name('player.buy.card');
+        Route::post('/buy-card/{roomId}', [PlayerController::class, 'buyCard'])->name('player.buy.card');
         Route::get('/my-cards', [PlayerController::class, 'myCards'])->name('player.my-cards');
         Route::get('/my-cards/{room_id}', [PlayerController::class, 'myCardsByRoom'])->name('player.my-cards.by-room');
-        Route::get('/room/{room}', [RoomController::class, 'show'])->name('player.room.show');
+        Route::get('/room/{roomId}', [PlayerController::class, 'showRoom'])->name('player.sala');
         Route::post('/buy-cards', [RoomController::class, 'buyCards'])->name('player.buyCards');
     });
 
     // **SORTEOS PARA JUGADORES**
     Route::get('/player/room/{room}/sorteo', [PlayerController::class, 'viewSorteo'])->name('player.room.sorteo');
-    Route::get('/player/room/{room}/raffle-numbers', [RaffleController::class, 'getGeneratedNumbers'])->name('player.raffle.numbers');
+    Route::get('/player/raffles/{roomId}/numbers', [RaffleController::class, 'getGeneratedNumbers'])->name('player.raffle.numbers');
 });
-Route::get('/player/my-cards', [PlayerController::class, 'myCards'])->name('player.my-cards');
-Route::get('/agent/raffles/{raffle}/edit', [RaffleController::class, 'edit'])->name('agent.raffles.edit');
 
-Route::put('/agent/raffles/{raffle}/update', [RaffleController::class, 'update'])->name('agent.raffles.update');
+// **APIS PARA SORTEOS**
+Route::prefix('api')->group(function () {
+    Route::post('/raffles/{raffle}/generate-number', [RaffleController::class, 'generateNumber']);
+    Route::get('/raffles/{raffle}/numbers', [RaffleController::class, 'getGeneratedNumbers']);
+    Route::get('/raffle/{id}/check-winner', [RaffleController::class, 'checkWinner']);
+});
+
+// **VISTA EN VIVO DE SORTEOS**
+Route::get('/agent/raffles/{raffle}/live', [RaffleController::class, 'liveView'])->name('agent.raffles.live');
 
 // **DESACTIVAR LOGIN PREDETERMINADO DE LARAVEL**
 Auth::routes(['login' => false]);
