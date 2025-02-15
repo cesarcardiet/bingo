@@ -1,19 +1,30 @@
 <?php
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 
-namespace App\Models;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-
-class GeneratedNumber extends Model
+class NumberGenerated implements ShouldBroadcast
 {
-    use HasFactory;
+    use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    protected $fillable = ['raffle_id', 'number'];
+    public $number;
+    public $raffleId;
 
-    public function raffle()
+    public function __construct($number, $raffleId)
     {
-        return $this->belongsTo(Raffle::class);
+        $this->number = $number;
+        $this->raffleId = $raffleId;
+    }
+
+    public function broadcastOn()
+    {
+        return new Channel("raffle.{$this->raffleId}");
+    }
+
+    public function broadcastAs()
+    {
+        return 'number.generated';
     }
 }
- 
