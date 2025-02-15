@@ -3,20 +3,10 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RaffleController;
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
 
+Route::post('/raffles/{raffleId}/generate-number', [RaffleController::class, 'generateNumber']);
 Route::get('/raffles/{raffleId}/numbers', [RaffleController::class, 'getGeneratedNumbers']);
-Route::get('/api/raffles/{raffleId}/numbers', [RaffleController::class, 'getGeneratedNumbers']);
+Route::get('/raffle/{id}/check-winner', [RaffleController::class, 'checkWinner']);
+Route::get('/check-winner', [RaffleController::class, 'checkWinnerAPI']);
+Route::post('/raffles/{id}/generate-number', [RaffleController::class, 'generateNumber']);
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});

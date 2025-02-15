@@ -13,9 +13,10 @@ class BingoCard extends Model
         'room_id', 'player_id', 'card_number', 'card_data', 'status'
     ];
 
-    protected $casts = [
-        'card_data' => 'array',
-    ];
+protected $casts = [
+    'card_data' => 'array', // ✅ Asegura que se maneje siempre como array
+];
+
 
     public function room()
     {
@@ -26,4 +27,5 @@ class BingoCard extends Model
     {
         return $this->belongsTo(Player::class);
     }
+    
 }

@@ -11,4 +11,17 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    optimizeDeps: {
+        include: ["pusher-js", "laravel-echo"]
+    },
+    build: {
+        rollupOptions: {
+            external: ["pusher-js", "laravel-echo"]
+        }
+    },
+    server: {
+        hmr: {
+            overlay: false // 🔥 Desactiva el overlay de errores molestos
+        }
+    }
 });
