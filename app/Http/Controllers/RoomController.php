@@ -7,8 +7,11 @@ use App\Models\Room;
 use App\Models\BingoCard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Traits\BingoHelper;
+
 class RoomController extends Controller
 {
+    use BingoHelper;
     /**
      * Muestra la lista de salas del agente autenticado.
      */
@@ -67,6 +70,7 @@ class RoomController extends Controller
                 'card_data' => json_encode($this->generateBingoCardData()),
                 'status' => 'Disponible',
             ]);
+            
         }
     
         return redirect()->route('rooms.index')->with('success', 'Sala creada correctamente con cartones generados.');
@@ -151,41 +155,5 @@ class RoomController extends Controller
 }
 
 
-    /**
-     * Lógica para que un jugador compre cartones.
-     */
-    public function buyCards(Request $request)
-    {
-        $player = Auth::guard('player')->user();
-        $cards = $request->cards;
-    
-        if (!$cards || count($cards) == 0) {
-            return response()->json(['success' => false, 'message' => 'No has seleccionado ningún cartón.'], 400);
-        }
-    
-        // Obtener la sala del primer cartón seleccionado
-        $firstCard = BingoCard::findOrFail($cards[0]);
-        $room = Room::findOrFail($firstCard->room_id);
-        $totalCost = count($cards) * $room->card_price;  // Ahora usa el precio real del cartón
-    
-        // Verificar saldo antes de continuar
-        if ($player->balance < $totalCost) {
-            return response()->json(['success' => false, 'message' => 'Saldo insuficiente.'], 400);
-        }
-    
-        // Verificar disponibilidad de cartones
-        $availableCards = BingoCard::whereIn('id', $cards)->where('status', 'Disponible')->count();
-    
-        if ($availableCards != count($cards)) {
-            return response()->json(['success' => false, 'message' => 'Algunos cartones ya han sido comprados.'], 400);
-        }
-    
-        // Descontar saldo y asignar cartones
-        $player->decrement('balance', $totalCost);
-        BingoCard::whereIn('id', $cards)->update(['player_id' => $player->id, 'status' => 'Comprado']);
-    
-        return response()->json(['success' => true, 'message' => 'Cartón(es) comprado(s) con éxito.']);
-    }
-    
     
 }
