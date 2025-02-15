@@ -17,11 +17,9 @@
         </div>
     @endif
 
-    @if($errors->any())
+    @if(session('error'))
         <div class="bg-red-500 text-white text-center p-2 rounded-md mb-4">
-            @foreach($errors->all() as $error)
-                <p>{{ $error }}</p>
-            @endforeach
+            {{ session('error') }}
         </div>
     @endif
 
@@ -69,7 +67,7 @@
         </button>
     </div>
 
-    <form id="buyCardForm" action="{{ route('player.buy.card') }}" method="POST">
+    <form id="buyCardForm" action="{{ route('player.buy.card', ['roomId' => $room->id]) }}" method="POST">
     @csrf
     <input type="hidden" name="selected_cards" id="selectedCards">
 </form>
